@@ -3,7 +3,7 @@
 
 echo "=================================================="
 echo "Aloha! Now we will try to Install Ubuntu 14.04 LTS"
-echo "with Apache 2.4, PHP 5.6, MySQL 5.6(manual)"
+echo "with Nginx , PHP 5.6, MySQL 5.6(manual)"
 echo "and others dependencies needed for Magento 2."
 echo "Good luck :P"
 echo "=================================================="
@@ -32,36 +32,79 @@ apt-get upgrade
 
 
 echo "=================================================="
-echo "INSTALLING APACHE"
+echo "INSTALLING PHP5-FPM"
 echo "=================================================="
 
-apt-get -y install apache2
+apt-get -y install php5-fpm
+# Still need to mod file nano /etc/php5/fpm/pool.d/www.conf
+# Add listen to socket
 
-if ! [ -L /var/www ]; then
-  rm -rf /var/www
-  ln -fs /vagrant/httpdocs /var/www
-fi
 
-VHOST=$(cat <<EOF
-<VirtualHost *:80>
-  DocumentRoot "/var/www"
-  ServerName magento2-vagrant.dev
+echo "=================================================="
+echo "INSTALLING NGINX"
+echo "=================================================="
 
-  <Directory "/var/www">
-    AllowOverride All
-  </Directory>
+apt-get -y install nginx 
 
-  SetEnv MAGE_IS_DEVELOPER_MODE true
-</VirtualHost>
+
+sudo rm /etc/nginx/sites-available/default
+sudo touch /etc/nginx/sites-available/default
+
+sudo cat >> /etc/nginx/sites-available/default <<'EOF'
+server {
+  listen   80;
+
+  root /usr/share/nginx/html;
+  index index.php index.html index.htm;
+
+  # Make site accessible from http://localhost/
+  server_name _;
+
+  location / {
+    # First attempt to serve request as file, then
+    # as directory, then fall back to index.html
+    try_files $uri $uri/ /index.html;
+  }
+
+  location /doc/ {
+    alias /usr/share/doc/;
+    autoindex on;
+    allow 127.0.0.1;
+    deny all;
+  }
+
+  # redirect server error pages to the static page /50x.html
+  #
+  error_page 500 502 503 504 /50x.html;
+  location = /50x.html {
+    root /usr/share/nginx/html;
+  }
+
+  # pass the PHP scripts to FastCGI server listening on /tmp/php5-fpm.sock
+  #
+  location ~ \.php$ {
+    try_files $uri =404;
+    fastcgi_split_path_info ^(.+\.php)(/.+)$;
+    fastcgi_pass unix:/var/run/php5-fpm.sock;
+    fastcgi_index index.php;
+    include fastcgi_params;
+  }
+
+  # deny access to .htaccess files, if Apache's document root
+  # concurs with nginx's one
+  #
+  location ~ /\.ht {
+    deny all;
+  }
+}
 EOF
-)
-echo "$VHOST" > /etc/apache2/sites-available/000-default.conf
 
-echo "ServerName localhost" | sudo tee /etc/apache2/conf-available/localhost.conf
+sudo touch /usr/share/nginx/html/info.php
+sudo cat >> /usr/share/nginx/html/info.php <<'EOF'
+<?php phpinfo(); ?>
+EOF
 
-a2enconf localhost
-a2enmod rewrite
-service apache2 restart
+sudo service nginx restart
 
 
 echo "=================================================="
@@ -73,7 +116,8 @@ add-apt-repository ppa:ondrej/php5-5.6
 apt-get -y update
 apt-get -y install php5 php5-mhash php5-mcrypt php5-curl php5-cli php5-mysql php5-gd php5-intl php5-xsl
 
-service apache2 restart
+service php5-fpm
+service nginx restart
 
 
 echo "=================================================="
