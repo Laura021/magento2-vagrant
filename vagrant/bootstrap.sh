@@ -37,9 +37,11 @@ echo "=================================================="
 
 apt-get -y install php5-fpm
 # Still need to mod file nano /etc/php5/fpm/pool.d/www.conf
-# Add listen to socket
-
-
+# Add listen = /var/run/php5-fpm.sock
+# listen.owner = www-data
+# listen.group = www-data
+# listen.mode = 0660
+ 
 echo "=================================================="
 echo "INSTALLING NGINX"
 echo "=================================================="
@@ -54,7 +56,7 @@ sudo cat >> /etc/nginx/sites-available/default <<'EOF'
 server {
   listen   80;
 
-  root /usr/share/nginx/html;
+  root /usr/share/nginx/www;
   index index.php index.html index.htm;
 
   # Make site accessible from http://localhost/
@@ -77,7 +79,7 @@ server {
   #
   error_page 500 502 503 504 /50x.html;
   location = /50x.html {
-    root /usr/share/nginx/html;
+    root /usr/share/nginx/www;
   }
 
   # pass the PHP scripts to FastCGI server listening on /tmp/php5-fpm.sock
@@ -99,8 +101,8 @@ server {
 }
 EOF
 
-sudo touch /usr/share/nginx/html/info.php
-sudo cat >> /usr/share/nginx/html/info.php <<'EOF'
+sudo touch /usr/share/nginx/www/info.php
+sudo cat >> /usr/share/nginx/www/info.php <<'EOF'
 <?php phpinfo(); ?>
 EOF
 
@@ -112,18 +114,23 @@ echo "INSTALLING PHP"
 echo "=================================================="
 
 apt-get -y update
+apt-get install python-software-properties
 add-apt-repository ppa:ondrej/php5-5.6
 apt-get -y update
-apt-get -y install php5 php5-mhash php5-mcrypt php5-curl php5-cli php5-mysql php5-gd php5-intl php5-xsl
+apt-get -y install php5 php5-curl php5-gd php5-imagick php5-intl php5-mcrypt php5-mhash php5-mysql php5-cli  php5-xsl
 
-service php5-fpm
-service nginx restart
+sudo service php5-fpm
+sudo service nginx restart
 
 
 echo "=================================================="
 echo "INSTALLING COMPOSER"
 echo "=================================================="
-curl --silent https://getcomposer.org/installer | php
+# If you have troubles please review https://getcomposer.org/download/
+php -r "copy('https://getcomposer.org/installer', 'composer-setup.php');"
+php -r "if (hash_file('SHA384', 'composer-setup.php') === '92102166af5abdb03f49ce52a40591073a7b859a86e8ff13338cf7db58a19f7844fbc0bb79b2773bf30791e935dbd938') { echo 'Installer verified'; } else { echo 'Installer corrupt'; unlink('composer-setup.php'); } echo PHP_EOL;"
+php composer-setup.php
+php -r "unlink('composer-setup.php');"
 mv composer.phar /usr/local/bin/composer
 
 
