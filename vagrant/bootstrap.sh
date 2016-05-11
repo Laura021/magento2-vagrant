@@ -56,7 +56,7 @@ sudo cat >> /etc/nginx/sites-available/default <<'EOF'
 server {
   listen   80;
 
-  root /usr/share/nginx/www;
+  root /usr/share/nginx/html;
   index index.php index.html index.htm;
 
   # Make site accessible from http://localhost/
@@ -79,7 +79,7 @@ server {
   #
   error_page 500 502 503 504 /50x.html;
   location = /50x.html {
-    root /usr/share/nginx/www;
+    root /usr/share/nginx/html;
   }
 
   # pass the PHP scripts to FastCGI server listening on /tmp/php5-fpm.sock
@@ -101,8 +101,8 @@ server {
 }
 EOF
 
-sudo touch /usr/share/nginx/www/info.php
-sudo cat >> /usr/share/nginx/www/info.php <<'EOF'
+sudo touch /usr/share/nginx/html/info.php
+sudo cat >> /usr/share/nginx/html/info.php <<'EOF'
 <?php phpinfo(); ?>
 EOF
 
@@ -113,11 +113,12 @@ echo "=================================================="
 echo "INSTALLING PHP"
 echo "=================================================="
 
-apt-get -y update
-apt-get install python-software-properties
-add-apt-repository ppa:ondrej/php5-5.6
-apt-get -y update
-apt-get -y install php5 php5-curl php5-gd php5-imagick php5-intl php5-mcrypt php5-mhash php5-mysql php5-cli  php5-xsl
+sudo apt-get -y update
+sudo apt-get install python-software-properties
+sudo add-apt-repository ppa:ondrej/php
+sudo apt-get -y update
+sudo apt-get -y install php5 php5-curl php5-gd php5-imagick php5-intl php5-mcrypt php5-mhash php5-mysql php5-cli  php5-xsl
+
 
 sudo service php5-fpm
 sudo service nginx restart
